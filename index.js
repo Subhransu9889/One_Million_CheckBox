@@ -35,6 +35,7 @@ async function main(){
     
     const CHECKBOX_COUNT = 100;
     const CHECKBOX_STATE_KEY = 'checkbox_state';
+    const rateLimitMap = new Map();
     // const state = {
     //     checkboxes: new Array(CHECKBOX_COUNT).fill(false)
     // }
@@ -45,6 +46,21 @@ async function main(){
         console.log('A user connected', {id: socket.id});
         socket.on('client:checkbox-change', async(data) => {
             console.log('Received checkbox change from client', data);
+
+            // const lastOperationTime = rateLimitMap.get(socket.id) || 0;
+            const lastOperationTime = await redis.get(`rate-limiting:${socket.id}`);
+            if(lastOperationTime){
+                const timeElapsed = Date.now() - lastOperationTime;
+                if(timeElapsed < 5.5 * 1000){
+                    socket.emit('server:rate-limit', {
+                        message: `You are changing checkboxes too quickly. Please wait for ${Math.ceil((5.5 * 1000 - timeElapsed) / 1000)} seconds before making another change.`
+                    });
+                    return;
+                }
+
+            }
+            await redis.set(`rate-limiting:${socket.id}`, Date.now());
+            
             // io.emit('server:checkbox-change', data);
             // state.checkboxes[data.id] = data.checked;
             const existingState = await redis.get(CHECKBOX_STATE_KEY);

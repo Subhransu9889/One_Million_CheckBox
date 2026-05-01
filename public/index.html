@@ -75,6 +75,27 @@
         backdrop-filter: blur(18px);
     }
 
+    #error-message {
+        width: min(100%, 980px);
+        min-height: 48px;
+        padding: 14px 18px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 209, 102, 0.38);
+        border-radius: 8px;
+        color: #fff8df;
+        background: rgba(117, 76, 0, 0.34);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+        text-align: center;
+        font-size: 0.98rem;
+        font-weight: 700;
+    }
+
+    #error-message.show {
+        display: flex;
+    }
+
     input[type="checkbox"] {
         width: 24px;
         height: 24px;
@@ -142,13 +163,31 @@
 </head>
 <body>
     <h1>1 million checkbox</h1>
+    <div id="error-message" role="alert" aria-live="polite"></div>
     <div id="container">
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const container = document.getElementById('container');
+        const errorMessage = document.getElementById('error-message');
         const CHECKBOX_COUNT = 100;
         const socket = io();
+        let errorTimeout;
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            clearTimeout(errorTimeout);
+            errorTimeout = setTimeout(() => {
+                errorMessage.classList.remove('show');
+                errorMessage.textContent = '';
+            }, 4500);
+        }
+
+        socket.on('server:rate-limit', (data) => {
+            const errorMsg = data.message;
+            showError(errorMsg);
+        });
 
         socket.on('server:checkbox-change', (data) => {
             console.log(`Received checkbox change from server: Checkbox ${data.id} is now ${data.checked ? 'checked' : 'unchecked'}`);
@@ -158,8 +197,11 @@
             }
         })
 
-        window.addEventListener('load', async () => {
+        async function fetchStateFromServer(){
             try{
+                while(container.firstChild){
+                    container.removeChild(container.firstChild);
+                }
                 const response = await fetch('/state', {method: 'GET'});
                 const data = await response.json();
                 if(data && data.checkboxes){
@@ -175,10 +217,19 @@
                                 id: idx,
                                 checked: e.target.checked
                             })
+                            fetchStateFromServer();
                         })  
                         container.appendChild(checkbox);        
                     })
                 }
+            } catch(err){
+                console.log(err);
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            try{
+                fetchStateFromServer();
             } catch(err){
                 console.log(err);
             }
