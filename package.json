@@ -1,0 +1,16 @@
+{
+  "name": "one_million_checkbox",
+  "version": "1.0.0",
+  "description": "a one milion checkbox implementation using websocket and rate limit",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Subransu",
+    "Websocket",
+    "Ratelimit"
+  ],
+  "author": "Subransu Sekhar Maharana",
+  "license": "ISC"
+}
